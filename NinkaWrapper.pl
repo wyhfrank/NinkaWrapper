@@ -7,12 +7,16 @@ use DBI;
 
 my $outputPath='';
 my $sqlite_format = 0;
-if (!GetOptions('output:s' => \$outputPath, 'sqlite' => \$sqlite_format)) {
+my $xls_format = 0;
+
+if (!GetOptions('output:s' => \$outputPath, 'sqlite' => \$sqlite_format, 'xls' => \$xls_format)) {
 print STDERR "NinkaWrapper version 1.1
 
-Usage $0 -s -o <OutputPath> -- <file1> <file2> ...
+Usage $0 -s -x -o <OutputPath> -- <file1> <file2> ...
 
-  -s Export to SQLite form. (default is xls)
+  -s Export to SQLite form.
+
+  -x Export to xls form. (default format)
 
   -o The output path of the result file.
 
@@ -26,8 +30,29 @@ if (substr($outputPath,-1) ne "/") {
 }
 
 my @files = @ARGV;
+my @results;
+
+foreach my $file (@files) {
+
+	my $r = `ninka.pl -d $file`;
+	push(@results, $r);
+}
+
+if (!$sqlite_format && !$xls_format) {
+	$xls_format = 1;
+}
 
 if ($sqlite_format) {
+	export2Sql(@results);					  
+} 
+
+if ($xls_format) {
+	export2Xls(@results);
+}
+
+
+sub export2Sql {
+	my @results = @_;
 
 	my $driver   = "SQLite";
 	my $database = "${outputPath}result.db";
@@ -49,9 +74,8 @@ if ($sqlite_format) {
 	my $sth = $dbh->prepare('INSERT INTO LICENSE (FILENAME, LICENSE) VALUES (?, ?)');
 
 	my $row = 1;
-	foreach my $file (@files) {
+	foreach my $r (@results) {
 
-		my $r = `ninka.pl -d $file`;
 		my @line=split(/;/, $r);
 
 		my @values=($line[0], $line[1]);
@@ -63,8 +87,11 @@ if ($sqlite_format) {
 	$dbh->commit;
 
 	$dbh->disconnect();
-					  
-} else {
+}
+
+sub export2Xls {
+	my @results = @_;
+
 	# Create a new Excel workbook
 	my $workbook = Spreadsheet::WriteExcel->new("${outputPath}result.xls");
 
@@ -87,9 +114,8 @@ if ($sqlite_format) {
 	$worksheet->write(0, 1, 'License', $format);
 
 	my $row = 1;
-	foreach my $file (@files) {
+	foreach my $r (@results) {
 
-		my $r = `ninka.pl -d $file`;
 		my @line=split(/;/, $r);
 
 		my $col=0;
@@ -101,6 +127,3 @@ if ($sqlite_format) {
 		$row++;
 	}
 }
-
-
-
