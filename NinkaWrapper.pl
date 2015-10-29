@@ -25,6 +25,10 @@ Usage $0 -s -x -o <OutputPath> -- <file1> <file2> ...
     exit 1;	
 }
 
+if ($outputPath eq '') {
+    $outputPath = '.';
+}
+
 if (substr($outputPath,-1) ne "/") {
 	$outputPath = $outputPath.'/';
 }
